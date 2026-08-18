@@ -114,7 +114,6 @@ async function init() {
     const saved = (await idb('kv', 'get', 'settings'))?.value;
     state.settings = { ...DEFAULT_SETTINGS, ...(saved || {}) };
     applyTheme();               // 读取保存的设置后再应用主题
-    loadUnclassifiedPattern();
 
     // 旧版 session 活动 id 迁移（work/study/... → 五行分类 id）
     const sessions = await idb('sessions', 'getAll');
@@ -289,7 +288,17 @@ function pieColor(cat) {
   const amt = (idx - (group.length - 1) / 2) * 0.16;
   return shade(cat.color, amt);
 }
-function drawPie(entries) {
+// 饼图周期总时长（小时）：日=24，周=7×24，月=当月天数×24
+function periodTotalHours() {
+  if (state.period === 'week') return 7 * 24;
+  if (state.period === 'month') {
+    const now = new Date();
+    const days = new Date(now.getFullYear(), now.getMonth() + 1 + state.periodOffset, 0).getDate();
+    return days * 24;
+  }
+  return 24;
+}
+function drawPie(entries, totalMs, periodMs) {
   const canvas = $('pieChart');
   const dpr = window.devicePixelRatio || 1;
   const w = Math.max(160, canvas.parentElement.clientWidth - 24);
@@ -301,10 +310,9 @@ function drawPie(entries) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  const total = entries.reduce((s, e) => s + e.value, 0);
   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#f3f4f6';
   const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#111827';
-  if (!total) {
+  if (!entries.length) {
     ctx.fillStyle = textColor;
     ctx.font = '13px sans-serif';
     ctx.textAlign = 'center';
@@ -316,41 +324,61 @@ function drawPie(entries) {
   ctx.lineWidth = 2;
   for (const e of entries) {
     if (!e.value) continue;
-    const sweep = (e.value / total) * Math.PI * 2;
+    const sweep = (e.value / periodMs) * Math.PI * 2;
     const gapS = Math.min(0.03, sweep * 0.4);
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, R, angle + gapS, angle + sweep - gapS);
     ctx.closePath();
-    ctx.fillStyle = (e.isUnclassified && unclassifiedPattern) ? unclassifiedPattern : e.color;
+    ctx.fillStyle = e.color;
     ctx.fill();
     ctx.strokeStyle = bg;
     ctx.stroke();
     angle += sweep;
   }
+  // 未记录的时间：白色扇区
+  const remain = Math.max(0, periodMs - totalMs);
+  if (remain > 0) {
+    const sweep = (remain / periodMs) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, angle, angle + sweep);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = bg;
+    ctx.stroke();
+  }
   ctx.fillStyle = textColor;
   ctx.font = '600 16px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(fmtDuration(total), cx, cy - 2);
+  ctx.fillText(fmtDuration(totalMs), cx, cy - 2);
   ctx.font = '11px sans-serif';
   ctx.fillStyle = textColor;
   ctx.globalAlpha = 0.6;
   ctx.fillText('共记录', cx, cy + 14);
   ctx.globalAlpha = 1;
 }
-function renderLegend(sorted) {
+function renderLegend(sorted, totalMs, periodMs) {
   const el = $('pieLegend');
   el.innerHTML = '';
-  if (!sorted.length) return;
-  const totalMs = sorted.reduce((s, e) => s + e.ms, 0);
   for (const { cat, ms } of sorted) {
-    const pct = totalMs ? (ms / totalMs) * 100 : 0;
+    const pct = periodMs ? (ms / periodMs) * 100 : 0;
     const row = document.createElement('div');
     row.className = 'legend-row';
     row.innerHTML = `<span class="dot" style="background:${pieColor(cat)}"></span>` +
       `<span class="l-name">${cat.icon} ${esc(cat.name)}</span>` +
       `<span class="l-meta">${cat.element}·${cat.dizhi}</span>` +
       `<span class="l-val">${fmtDuration(ms)} · ${pct.toFixed(0)}%</span>`;
+    el.appendChild(row);
+  }
+  const remain = Math.max(0, periodMs - totalMs);
+  if (periodMs > 0 && remain > 0) {
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = `<span class="dot bordered"></span>` +
+      `<span class="l-name">未记录</span><span class="l-meta"></span>` +
+      `<span class="l-val">${fmtDuration(remain)} · ${((remain / periodMs) * 100).toFixed(0)}%</span>`;
     el.appendChild(row);
   }
 }
@@ -369,14 +397,15 @@ async function renderStats() {
     totalMs += dur;
     list.push({ s, dur, running: s.end == null });
   }
-  $('statsSummary').textContent = `共记录 ${fmtDuration(totalMs)}`;
+  $('statsSummary').textContent = `共记录 ${fmtDuration(totalMs)} · 占${periodTotalHours()}小时 ${periodMs ? ((totalMs / periodMs) * 100).toFixed(0) : 0}%`;
 
   const sorted = [...totals.entries()]
     .map(([aid, ms]) => ({ cat: aid == null ? UNCLASSIFIED : state.activities.find((c) => c.id === aid), ms }))
     .filter((e) => e.cat)
     .sort((a, b) => b.ms - a.ms);
-  drawPie(sorted.map((e) => ({ color: pieColor(e.cat), value: e.ms, isUnclassified: e.cat.id == null })));
-  renderLegend(sorted);
+  const periodMs = periodTotalHours() * 3600e3;
+  drawPie(sorted.map((e) => ({ color: pieColor(e.cat), value: e.ms })), totalMs, periodMs);
+  renderLegend(sorted, totalMs, periodMs);
 
   const listEl = $('sessionList');
   listEl.innerHTML = '';
@@ -412,19 +441,39 @@ async function renderStats() {
 }
 
 /* ================= 分类选择弹窗（重新分类用） ================= */
+let pickerOnPick = null;
+let pickerSelectedCat = null;
 function openCategoryPicker(title, onPick) {
+  pickerOnPick = onPick;
+  $('catPickerTitle').textContent = title;
   const grid = $('catPickerGrid');
   grid.innerHTML = '';
   for (const c of state.activities) {
     const b = document.createElement('button');
     b.className = 'picker-btn';
-    b.style.setProperty('--ac', c.color);
     b.innerHTML = `<span class="p-icon">${c.icon}</span><span class="p-name">${esc(c.name)}</span><span class="p-meta">${c.element}·${c.dizhi}</span>`;
-    b.addEventListener('click', () => { closePicker(); onPick(c); });
+    b.addEventListener('click', () => showPickerDetail(c));
     grid.appendChild(b);
   }
-  $('catPickerTitle').textContent = title;
+  showPickerPage('grid');
   $('catPicker').classList.remove('hidden');
+}
+function showPickerDetail(cat) {
+  pickerSelectedCat = cat;
+  $('pickerDetail').innerHTML =
+    `<div class="pd-head" style="background:${cat.color};color:${isLightColor(cat.color) ? '#111827' : '#ffffff'}">` +
+      `<span class="pd-icon">${cat.icon}</span><span class="pd-name">${esc(cat.name)}</span><span class="pd-meta">${cat.element} · ${cat.dizhi}</span>` +
+    `</div>` +
+    `<div class="pd-rules-title">分类规则（含以下关键词即归入此类）</div>` +
+    `<div class="pd-rules">${cat.words.map((w) => `<span class="pd-word">${esc(w)}</span>`).join('')}</div>`;
+  showPickerPage('detail');
+}
+function showPickerPage(which) {
+  const isGrid = which === 'grid';
+  $('catPickerGrid').classList.toggle('hidden', !isGrid);
+  $('pickerDetail').classList.toggle('hidden', isGrid);
+  $('pickerGridActions').classList.toggle('hidden', !isGrid);
+  $('pickerDetailActions').classList.toggle('hidden', isGrid);
 }
 function closePicker() { $('catPicker').classList.add('hidden'); }
 
@@ -611,25 +660,6 @@ function applyTheme() {
 function toggleBgUpload() {
   $('bgUploadRow').style.display = state.settings.theme === 'custom' ? 'flex' : 'none';
 }
-// 未分类背景图：用于计时状态卡与饼图扇区
-let unclassifiedPattern = null;
-function loadUnclassifiedPattern() {
-  unclassifiedPattern = null;
-  if (!state.settings.unclassifiedBg) return;
-  const img = new Image();
-  img.onload = () => {
-    try {
-      const c = document.createElement('canvas');
-      c.width = 48;
-      c.height = 48;
-      const ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0, 48, 48);
-      unclassifiedPattern = ctx.createPattern(c, 'repeat');
-      if (state.view === 'stats') renderStats();
-    } catch (e) { /* 忽略 */ }
-  };
-  img.src = state.settings.unclassifiedBg;
-}
 if (matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {});
 function registerSW() {
   // Service Worker 需要安全上下文 (https 或 localhost)，局域网 http 下自动跳过，不影响使用
@@ -733,7 +763,6 @@ function setupEvents() {
     reader.onload = async () => {
       state.settings.unclassifiedBg = reader.result;
       await saveSettings();
-      loadUnclassifiedPattern();
       updateStatusCard();
       if (state.view === 'stats') renderStats();
       showToast('未分类背景图已更新');
@@ -744,7 +773,6 @@ function setupEvents() {
   $('removeUncBg').addEventListener('click', async () => {
     state.settings.unclassifiedBg = '';
     await saveSettings();
-    loadUnclassifiedPattern();
     updateStatusCard();
     if (state.view === 'stats') renderStats();
   });
@@ -754,6 +782,15 @@ function setupEvents() {
   // 分类选择弹窗
   $('catPickerCancel').addEventListener('click', closePicker);
   $('catPicker').addEventListener('click', (e) => { if (e.target === $('catPicker')) closePicker(); });
+  $('pickerBack').addEventListener('click', () => showPickerPage('grid'));
+  $('pickerConfirm').addEventListener('click', () => {
+    if (pickerSelectedCat && pickerOnPick) {
+      const cb = pickerOnPick;
+      const cat = pickerSelectedCat;
+      closePicker();
+      cb(cat);
+    }
+  });
   // 数据操作
   $('exportToday').addEventListener('click', () => exportDetail(dayRange(), '时间明细-今日.md', '已导出今日明细表，保存在手机下载目录'));
   $('exportWeek').addEventListener('click', () => exportDetail(weekRange(), '时间明细-本周.md', '已导出本周明细表（周一起），保存在手机下载目录'));

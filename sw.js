@@ -1,5 +1,5 @@
 // 柳比歇夫时间记录 - Service Worker（离线缓存）
-const CACHE = 'lyubishchev-v7';
+const CACHE = 'lyubishchev-v8';
 const ASSETS = [
   './',
   './index.html',

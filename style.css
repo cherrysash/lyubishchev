@@ -116,6 +116,7 @@ input, select { font-family: inherit; }
 .pie-legend { width: 100%; max-width: 320px; }
 .legend-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
 .legend-row .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.legend-row .dot.bordered { border: 1px solid var(--border); background: #fff; }
 .l-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .l-meta { color: var(--muted); font-size: 11px; flex: none; }
 .l-val { color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
@@ -155,6 +156,17 @@ input, select { font-family: inherit; }
 .picker-btn .p-icon { font-size: 22px; }
 .picker-btn .p-name { font-size: 12px; font-weight: 600; }
 .picker-btn .p-meta { font-size: 10px; color: var(--muted); }
+.picker-detail { margin-bottom: 12px; }
+.pd-head { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; }
+.pd-head .pd-icon { font-size: 26px; }
+.pd-head .pd-name { font-size: 16px; font-weight: 700; }
+.pd-head .pd-meta { font-size: 12px; opacity: .85; margin-left: auto; }
+.pd-rules-title { font-size: 12px; color: var(--muted); margin: 10px 0 6px; }
+.pd-rules { display: flex; flex-wrap: wrap; gap: 6px; max-height: 132px; overflow-y: auto; }
+.pd-word {
+  font-size: 11px; padding: 4px 8px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+}
 .act-edit-row {
   display: grid; grid-template-columns: 40px 1fr; gap: 6px;
   padding: 10px; background: var(--card); border-radius: 12px; box-shadow: var(--shadow);
