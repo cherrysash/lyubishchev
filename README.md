@@ -87,6 +87,39 @@ lyubishchev/
 └── tools/gen-icons.js  # 图标生成脚本（纯 Node）
 ```
 
+## 部署到公网（让任何人都能用）
+
+应用是**纯静态**的（分类规则在浏览器本地跑、数据存在各人自己的手机里），所以不需要你的电脑当服务器——随便一个免费静态托管就能让全世界访问。**每个人用自己的浏览器打开，各记各的，互不干扰。**
+
+### 方式一：GitHub Pages（推荐，免费 HTTPS）
+
+1. 在 github.com 新建仓库，名字建议 `lyubishchev`（**公开**仓库才能免费开 Pages）
+2. 把本项目推送上去（在项目目录执行，`<用户名>` 换成你的 GitHub 用户名）：
+
+```bash
+cd lyubishchev
+git remote add origin https://github.com/<用户名>/lyubishchev.git
+git push -u origin master
+```
+
+3. 仓库 Settings → Pages → Source 选 `master` 分支、根目录 → Save
+4. 等 1~2 分钟，访问：`https://<用户名>.github.io/lyubishchev/`
+
+> 以后更新：`git add -A && git commit -m "更新" && git push`，等 1 分钟刷新即可。
+
+### 方式二：Netlify Drop（不用 git，拖拽即用）
+
+打开 `app.netlify.com/drop`，把整个 `lyubishchev` 文件夹**拖进去**，立刻得到一个公开 HTTPS 地址。改完文件再拖一次就更新。最简单，适合不折腾 git。
+
+### 方式三：Cloudflare Pages / Vercel
+
+同样免费，连接你的 GitHub 仓库后自动构建发布，国内访问速度通常也不错。
+
+### 公网部署的额外好处
+
+- **HTTPS**：浏览器允许 Service Worker 运行 → 手机上可"添加到主屏幕"变成 App，**离线也能用**
+- 数据永远在用户自己的设备上，不需要注册、不会泄露
+
 ## 关于离线安装（PWA）
 
 浏览器安全策略要求 Service Worker 只能在 **HTTPS 或 localhost** 下运行。
