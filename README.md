@@ -93,19 +93,23 @@ lyubishchev/
 
 ### 方式一：GitHub Pages（推荐，免费 HTTPS）
 
-1. 在 github.com 新建仓库，名字建议 `lyubishchev`（**公开**仓库才能免费开 Pages）
-2. 把本项目推送上去（在项目目录执行，`<用户名>` 换成你的 GitHub 用户名）：
+1. 登录 github.com → **New repository**，名字填 `lyubishchev`，选 **Public**，不要勾选"初始化 README"（项目里已有）
+2. 本项目已配置好远端（用户名 `cherrysash`），在项目目录直接推送：
 
 ```bash
 cd lyubishchev
-git remote add origin https://github.com/<用户名>/lyubishchev.git
-git push -u origin master
+git push -u origin main
 ```
 
-3. 仓库 Settings → Pages → Source 选 `master` 分支、根目录 → Save
-4. 等 1~2 分钟，访问：`https://<用户名>.github.io/lyubishchev/`
+> 首次推送会要求登录：用户名填 `cherrysash`，**密码处填 Personal Access Token**（不是登录密码）——
+> github.com → Settings → Developer settings → Personal access tokens → Generate new token，勾选 `repo` 权限，生成后复制粘贴。
 
-> 以后更新：`git add -A && git commit -m "更新" && git push`，等 1 分钟刷新即可。
+3. 仓库 **Settings → Pages** → Source 选 `main` 分支、根目录 → Save
+4. 等 1~2 分钟，访问：`https://cherrysash.github.io/lyubishchev/`
+
+> 更新：`git add -A && git commit -m "更新" && git push`，1 分钟后刷新生效。
+>
+> 国内直连 GitHub 可能较慢或超时，推送失败可重试或挂代理（`git config http.proxy http://代理地址:端口`）。
 
 ### 方式二：Netlify Drop（不用 git，拖拽即用）
 
