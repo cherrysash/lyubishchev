@@ -233,6 +233,8 @@ function startTicker() {
 function checkReminders() {
   const banner = $('reminderBanner');
   if (!state.running) { banner.classList.add('hidden'); return; }
+  // 睡眠修复类不提醒遗忘/超长（睡觉时手机不会操作，提醒无意义）
+  if (catOf(state.running).id === 'shuimian') { banner.classList.add('hidden'); return; }
   const now = Date.now();
   const durMs = now - state.running.start;
   const name = actName(state.running.activityId);
@@ -438,6 +440,7 @@ function fillSelects() {
   $('setVibrate').checked = !!state.settings.vibrate;
   $('setAI').checked = !!state.settings.smartClassify;
   $('setTheme').value = state.settings.theme;
+  toggleBgUpload();
 }
 
 /* ================= 数据导出 / 导入 ================= */
@@ -573,12 +576,40 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.add('hidden'), 2400);
 }
 
-/* ================= 主题 / PWA ================= */
+/* ================= 主题 / 背景 / PWA ================= */
+const DOT_THEMES = {
+  'pink-dots': { pattern: 'radial-gradient(circle, rgba(255,105,180,.20) 9px, transparent 10px)', size: '44px 44px', meta: '#e75480' },
+  'green-dots': { pattern: 'radial-gradient(circle, rgba(46,204,113,.20) 9px, transparent 10px)', size: '44px 44px', meta: '#27ae60' },
+  'blue-dots': { pattern: 'radial-gradient(circle, rgba(41,128,185,.20) 9px, transparent 10px)', size: '44px 44px', meta: '#2980b9' },
+};
 function applyTheme() {
   const t = state.settings.theme || 'auto';
-  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-  document.querySelector('meta[name="theme-color"]').setAttribute('content', dark ? '#0f1115' : '#1a73e8');
+  const body = document.body;
+  let meta = '#1a73e8';
+  if (t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.dataset.theme = 'dark';
+    body.style.backgroundImage = '';
+    body.style.backgroundSize = '';
+    meta = '#0f1115';
+  } else if (DOT_THEMES[t]) {
+    document.documentElement.dataset.theme = t;
+    body.style.backgroundImage = DOT_THEMES[t].pattern;
+    body.style.backgroundSize = DOT_THEMES[t].size;
+    meta = DOT_THEMES[t].meta;
+  } else if (t === 'custom' && state.settings.bgImage) {
+    document.documentElement.dataset.theme = 'light';
+    body.style.backgroundImage = `url(${state.settings.bgImage})`;
+    body.style.backgroundSize = 'cover';
+    body.style.backgroundPosition = 'center';
+  } else {
+    document.documentElement.dataset.theme = 'light';
+    body.style.backgroundImage = '';
+    body.style.backgroundSize = '';
+  }
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', meta);
+}
+function toggleBgUpload() {
+  $('bgUploadRow').style.display = state.settings.theme === 'custom' ? 'flex' : 'none';
 }
 if (matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if (state.settings.theme === 'auto') applyTheme();
@@ -646,7 +677,34 @@ function setupEvents() {
     state.settings.theme = e.target.value;
     await saveSettings();
     applyTheme();
+    toggleBgUpload();
     if (state.view === 'stats') renderStats();
+  });
+  // 自定义背景图
+  $('uploadBg').addEventListener('click', () => $('bgFile').click());
+  $('bgFile').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 4 * 1024 * 1024) { showToast('图片过大，请选 4MB 以内'); e.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      state.settings.bgImage = reader.result;
+      state.settings.theme = 'custom';
+      await saveSettings();
+      applyTheme();
+      fillSelects();
+      toggleBgUpload();
+    };
+    reader.readAsDataURL(f);
+    e.target.value = '';
+  });
+  $('removeBg').addEventListener('click', async () => {
+    state.settings.bgImage = '';
+    state.settings.theme = 'light';
+    await saveSettings();
+    applyTheme();
+    fillSelects();
+    toggleBgUpload();
   });
   // 输入 + 本地分类
   $('startNoteBtn').addEventListener('click', submitNote);
