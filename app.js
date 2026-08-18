@@ -320,11 +320,12 @@ function drawPie(entries, totalMs, periodMs) {
     return;
   }
   const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 6;
+  const denom = Math.max(periodMs, totalMs);   // 防止异常数据溢出整圈
   let angle = -Math.PI / 2;
   ctx.lineWidth = 2;
   for (const e of entries) {
     if (!e.value) continue;
-    const sweep = (e.value / periodMs) * Math.PI * 2;
+    const sweep = (e.value / denom) * Math.PI * 2;
     const gapS = Math.min(0.03, sweep * 0.4);
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -337,9 +338,9 @@ function drawPie(entries, totalMs, periodMs) {
     angle += sweep;
   }
   // 未记录的时间：白色扇区
-  const remain = Math.max(0, periodMs - totalMs);
+  const remain = Math.max(0, denom - totalMs);
   if (remain > 0) {
-    const sweep = (remain / periodMs) * Math.PI * 2;
+    const sweep = (remain / denom) * Math.PI * 2;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, R, angle, angle + sweep);
@@ -397,13 +398,14 @@ async function renderStats() {
     totalMs += dur;
     list.push({ s, dur, running: s.end == null });
   }
-  $('statsSummary').textContent = `共记录 ${fmtDuration(totalMs)} · 占${periodTotalHours()}小时 ${periodMs ? ((totalMs / periodMs) * 100).toFixed(0) : 0}%`;
+  const periodHours = periodTotalHours();
+  const periodMs = periodHours * 3600e3;
+  $('statsSummary').textContent = `共记录 ${fmtDuration(totalMs)} · 占${periodHours}小时 ${periodMs ? ((totalMs / periodMs) * 100).toFixed(0) : 0}%`;
 
   const sorted = [...totals.entries()]
     .map(([aid, ms]) => ({ cat: aid == null ? UNCLASSIFIED : state.activities.find((c) => c.id === aid), ms }))
     .filter((e) => e.cat)
     .sort((a, b) => b.ms - a.ms);
-  const periodMs = periodTotalHours() * 3600e3;
   drawPie(sorted.map((e) => ({ color: pieColor(e.cat), value: e.ms })), totalMs, periodMs);
   renderLegend(sorted, totalMs, periodMs);
 
