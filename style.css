@@ -23,42 +23,6 @@
   --danger-bg: #3a1d1d;
   --shadow: 0 1px 3px rgba(0, 0, 0, .4);
 }
-[data-theme="pink-dots"] {
-  --bg: #fff0f4;
-  --card: #ffffff;
-  --text: #3d2230;
-  --muted: #9a7084;
-  --border: #f2d6df;
-  --accent: #e75480;
-  --accent-2: #d6336c;
-  --danger: #dc2626;
-  --danger-bg: #fde8ee;
-  --shadow: 0 1px 3px rgba(0, 0, 0, .06);
-}
-[data-theme="green-dots"] {
-  --bg: #f0fbf3;
-  --card: #ffffff;
-  --text: #1f3a2a;
-  --muted: #6f9a7d;
-  --border: #d6eddd;
-  --accent: #27ae60;
-  --accent-2: #1e8449;
-  --danger: #dc2626;
-  --danger-bg: #e9f9ef;
-  --shadow: 0 1px 3px rgba(0, 0, 0, .06);
-}
-[data-theme="blue-dots"] {
-  --bg: #f0f7ff;
-  --card: #ffffff;
-  --text: #1f3247;
-  --muted: #6d87a3;
-  --border: #d5e5f5;
-  --accent: #2980b9;
-  --accent-2: #2471a3;
-  --danger: #dc2626;
-  --danger-bg: #e8f1fb;
-  --shadow: 0 1px 3px rgba(0, 0, 0, .06);
-}
 html { -webkit-tap-highlight-color: transparent; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;

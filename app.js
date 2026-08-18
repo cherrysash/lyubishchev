@@ -84,7 +84,7 @@ const LEGACY_ACTIVITY_MAP = {
   'shui-hai': 'mingxiang', 'shui-zi': 'fupan',
 };
 const UNCLASSIFIED = { id: null, name: '未分类', element: '—', color: '#9ca3af', dizhi: '—', icon: '❓', words: [] };
-const DEFAULT_SETTINGS = { idleMin: 60, longHours: 4, vibrate: true, theme: 'auto', smartClassify: true };
+const DEFAULT_SETTINGS = { idleMin: 60, longHours: 4, vibrate: true, theme: 'light', smartClassify: true };
 
 // 分类是固定的，每次直接从知识库读取（不存 IndexedDB，改规则刷新即生效）
 function catOf(session) {
@@ -108,11 +108,13 @@ async function init() {
     setupEvents();
     applyTheme();
 
-    // 分类固定为知识库十二行为（不存库，规则更新即时生效）
+    // 分类固定为知识库十四行为（不存库，规则更新即时生效）
     state.activities = CATEGORIES.map((c) => ({ ...c }));
 
     const saved = (await idb('kv', 'get', 'settings'))?.value;
     state.settings = { ...DEFAULT_SETTINGS, ...(saved || {}) };
+    applyTheme();               // 读取保存的设置后再应用主题
+    loadUnclassifiedPattern();
 
     // 旧版 session 活动 id 迁移（work/study/... → 五行分类 id）
     const sessions = await idb('sessions', 'getAll');
@@ -161,9 +163,20 @@ function updateStatusCard() {
   if (state.running) {
     const c = catOf(state.running);
     card.classList.add('running');
-    // 背景块 = 五行分类色，文字颜色按明暗自适应
-    card.style.background = c.color;
-    card.style.color = isLightColor(c.color) ? '#111827' : '#ffffff';
+    if (c.id == null) {
+      // 未分类：用用户上传的背景图（加深色蒙版），或渐变兜底
+      if (state.settings.unclassifiedBg) {
+        card.style.background = `linear-gradient(rgba(0,0,0,.38), rgba(0,0,0,.38)), url(${state.settings.unclassifiedBg}) center / cover`;
+        card.style.color = '#ffffff';
+      } else {
+        card.style.background = 'linear-gradient(135deg, #aeb6c0, #7b8494)';
+        card.style.color = '#ffffff';
+      }
+    } else {
+      // 背景块 = 五行分类色，文字颜色按明暗自适应
+      card.style.background = c.color;
+      card.style.color = isLightColor(c.color) ? '#111827' : '#ffffff';
+    }
     chip.textContent = `${c.icon} ${c.name} · ${c.element}·${c.dizhi}`;
     chip.classList.remove('hidden');
     label.textContent = state.running.note ? `📝 ${state.running.note}` : (c.id ? '正在计时' : '未分类');
@@ -201,9 +214,10 @@ function buzz() { if (state.settings.vibrate && navigator.vibrate) navigator.vib
 
 /* ================= 输入 + 本地智能分类（不卡录入，识别不到记为未分类） ================= */
 async function submitNote() {
-  if (state.running) return;
   const text = $('noteInput').value.trim();
   if (!text) return;
+  // 计时中直接输入内容点开始 = 自动切换（先结束当前计时）
+  if (state.running) await stopTimer();
   let activityId = null;
   if (state.settings.smartClassify) {
     const cat = ClassifyRules.classify(text, state.activities);   // 纯本地，无 API
@@ -308,7 +322,7 @@ function drawPie(entries) {
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, R, angle + gapS, angle + sweep - gapS);
     ctx.closePath();
-    ctx.fillStyle = e.color;
+    ctx.fillStyle = (e.isUnclassified && unclassifiedPattern) ? unclassifiedPattern : e.color;
     ctx.fill();
     ctx.strokeStyle = bg;
     ctx.stroke();
@@ -361,7 +375,7 @@ async function renderStats() {
     .map(([aid, ms]) => ({ cat: aid == null ? UNCLASSIFIED : state.activities.find((c) => c.id === aid), ms }))
     .filter((e) => e.cat)
     .sort((a, b) => b.ms - a.ms);
-  drawPie(sorted.map((e) => ({ color: pieColor(e.cat), value: e.ms })));
+  drawPie(sorted.map((e) => ({ color: pieColor(e.cat), value: e.ms, isUnclassified: e.cat.id == null })));
   renderLegend(sorted);
 
   const listEl = $('sessionList');
@@ -439,7 +453,7 @@ function fillSelects() {
   $('setLong').innerHTML = longOpts.map(([v, l]) => `<option value="${v}"${v === state.settings.longHours ? ' selected' : ''}>${l}</option>`).join('');
   $('setVibrate').checked = !!state.settings.vibrate;
   $('setAI').checked = !!state.settings.smartClassify;
-  $('setTheme').value = state.settings.theme;
+  $('setTheme').value = ['light', 'dark', 'custom'].includes(state.settings.theme) ? state.settings.theme : 'light';
   toggleBgUpload();
 }
 
@@ -576,63 +590,47 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.add('hidden'), 2400);
 }
 
-/* ================= 主题 / 背景 / PWA ================= */
-const DOT_THEMES = {
-  // 斜排波点：大点 + 错开半格的碎点，形成斜向节奏
-  'pink-dots': {
-    pattern: 'radial-gradient(circle, rgba(255,105,180,.32) 5px, transparent 6px), radial-gradient(circle, rgba(255,105,180,.20) 10px, transparent 11px)',
-    size: '44px 44px, 44px 44px',
-    pos: '22px 22px, 0 0',
-    meta: '#e75480',
-  },
-  'green-dots': {
-    pattern: 'radial-gradient(circle, rgba(46,204,113,.32) 5px, transparent 6px), radial-gradient(circle, rgba(46,204,113,.20) 10px, transparent 11px)',
-    size: '44px 44px, 44px 44px',
-    pos: '22px 22px, 0 0',
-    meta: '#27ae60',
-  },
-  'blue-dots': {
-    pattern: 'radial-gradient(circle, rgba(41,128,185,.32) 5px, transparent 6px), radial-gradient(circle, rgba(41,128,185,.20) 10px, transparent 11px)',
-    size: '44px 44px, 44px 44px',
-    pos: '22px 22px, 0 0',
-    meta: '#2980b9',
-  },
-};
+/* ================= 主题 / 背景 / 未分类背景图 / PWA ================= */
 function applyTheme() {
-  const t = state.settings.theme || 'auto';
   const body = document.body;
-  let meta = '#1a73e8';
-  if (t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)) {
-    document.documentElement.dataset.theme = 'dark';
-    body.style.backgroundImage = '';
-    body.style.backgroundSize = '';
-    body.style.backgroundPosition = '';
-    meta = '#0f1115';
-  } else if (DOT_THEMES[t]) {
-    document.documentElement.dataset.theme = t;
-    body.style.backgroundImage = DOT_THEMES[t].pattern;
-    body.style.backgroundSize = DOT_THEMES[t].size;
-    body.style.backgroundPosition = DOT_THEMES[t].pos;
-    meta = DOT_THEMES[t].meta;
-  } else if (t === 'custom' && state.settings.bgImage) {
-    document.documentElement.dataset.theme = 'light';
+  let theme = 'light';
+  if (state.settings.theme === 'dark') theme = 'dark';
+  else if (state.settings.theme === 'custom' && state.settings.bgImage) theme = 'custom';
+  document.documentElement.dataset.theme = theme;
+  if (theme === 'custom') {
     body.style.backgroundImage = `url(${state.settings.bgImage})`;
     body.style.backgroundSize = 'cover';
     body.style.backgroundPosition = 'center';
   } else {
-    document.documentElement.dataset.theme = 'light';
     body.style.backgroundImage = '';
     body.style.backgroundSize = '';
     body.style.backgroundPosition = '';
   }
-  document.querySelector('meta[name="theme-color"]').setAttribute('content', meta);
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#0f1115' : '#1a73e8');
 }
 function toggleBgUpload() {
   $('bgUploadRow').style.display = state.settings.theme === 'custom' ? 'flex' : 'none';
 }
-if (matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-  if (state.settings.theme === 'auto') applyTheme();
-});
+// 未分类背景图：用于计时状态卡与饼图扇区
+let unclassifiedPattern = null;
+function loadUnclassifiedPattern() {
+  unclassifiedPattern = null;
+  if (!state.settings.unclassifiedBg) return;
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 48;
+      c.height = 48;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, 48, 48);
+      unclassifiedPattern = ctx.createPattern(c, 'repeat');
+      if (state.view === 'stats') renderStats();
+    } catch (e) { /* 忽略 */ }
+  };
+  img.src = state.settings.unclassifiedBg;
+}
+if (matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {});
 function registerSW() {
   // Service Worker 需要安全上下文 (https 或 localhost)，局域网 http 下自动跳过，不影响使用
   if ('serviceWorker' in navigator && window.isSecureContext) {
@@ -724,6 +722,31 @@ function setupEvents() {
     applyTheme();
     fillSelects();
     toggleBgUpload();
+  });
+  // 未分类背景图（计时状态卡与饼图扇区用）
+  $('uploadUncBg').addEventListener('click', () => $('uncBgFile').click());
+  $('uncBgFile').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    if (f.size > 4 * 1024 * 1024) { showToast('图片过大，请选 4MB 以内'); e.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      state.settings.unclassifiedBg = reader.result;
+      await saveSettings();
+      loadUnclassifiedPattern();
+      updateStatusCard();
+      if (state.view === 'stats') renderStats();
+      showToast('未分类背景图已更新');
+    };
+    reader.readAsDataURL(f);
+    e.target.value = '';
+  });
+  $('removeUncBg').addEventListener('click', async () => {
+    state.settings.unclassifiedBg = '';
+    await saveSettings();
+    loadUnclassifiedPattern();
+    updateStatusCard();
+    if (state.view === 'stats') renderStats();
   });
   // 输入 + 本地分类
   $('startNoteBtn').addEventListener('click', submitNote);

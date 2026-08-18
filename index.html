@@ -97,10 +97,6 @@
       <select id="setTheme">
         <option value="light">浅色</option>
         <option value="dark">深色</option>
-        <option value="auto">跟随系统</option>
-        <option value="pink-dots">粉色波点</option>
-        <option value="green-dots">绿色波点</option>
-        <option value="blue-dots">蓝色波点</option>
         <option value="custom">自定义背景图</option>
       </select>
     </div>
@@ -112,6 +108,14 @@
       </div>
     </div>
     <input type="file" id="bgFile" accept="image/*" class="hidden">
+    <div class="setting-row">
+      <label>未分类背景图</label>
+      <div style="display:flex;gap:8px">
+        <button id="uploadUncBg" class="btn small">上传图片</button>
+        <button id="removeUncBg" class="btn small danger">移除</button>
+      </div>
+    </div>
+    <input type="file" id="uncBgFile" accept="image/*" class="hidden">
 
     <h2>数据</h2>
     <div class="data-actions">
