@@ -61,6 +61,8 @@
   const SOCIAL_GENERIC = ['聊天', '微信', '打电话', '电话', '语音', '通话', '沟通', '交流', '聊', '消息'];
   // 4. 健康保持/日常锻炼 → 滋养身体 → 健身滋养（土·辰）
   const EXERCISE_WORDS = ['跑', '跑步', '慢跑', '健身', '撸铁', '瑜伽', '有氧', '游泳', '散步', '遛狗', '遛弯', '走路', '步行', '骑行', '骑车', '拉伸', '锻炼', '运动', '打球', '羽毛球', '篮球', '足球', '乒乓球', '跳绳', '深蹲', '俯卧撑', '晨练', '爬山', '徒步', '健身房', '卧推', '硬拉', '高位下拉', '练背', '练腿', '练胸', '跳操', '快走'];
+  // 4.5 家庭接送/照护优先（避免"送孩子上学"里的"学"被学习精进抢走）
+  const FAMILY_WORDS = ['接娃', '送娃', '接孩子', '送孩子', '接送'];
   // 其余按表顺序匹配
   const ORDER = ['xuexi', 'kaituo', 'biaoda', 'yunwei', 'zhengli', 'jinglian', 'shouwei', 'mingxiang', 'fupan'];
 
@@ -92,6 +94,8 @@
     if (SOCIAL_GENERIC.some((w) => t.includes(w))) return findIn('qinggan');
     // 铁律 4：健康保持/日常锻炼 → 健身滋养
     if (EXERCISE_WORDS.some((w) => t.includes(w))) return findIn('jianshen');
+    // 家庭接送/照护 → 日常运维（先于学习精进，避免"送孩子上学"被"学"抢走）
+    if (FAMILY_WORDS.some((w) => t.includes(w))) return findIn('yunwei');
     // 其余按表顺序匹配（返回第一个命中关键词的分类）
     for (const id of ORDER) {
       const cat = findIn(id);
