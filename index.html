@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>柳比歇夫时间记录</title>
+<meta name="description" content="极简柳比歇夫时间记录器：记录你正在做的事情用了多少时间">
+<meta name="theme-color" content="#1a73e8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="时间记录">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>⏱ 时间记录</h1>
+  <span id="todayTotal" class="today-total">今日 --</span>
+</header>
+
+<main>
+  <!-- 记录视图 -->
+  <section id="view-record" class="view">
+    <div id="statusCard" class="status-card">
+      <div id="categoryChip" class="chip hidden"></div>
+      <div class="status-label" id="statusLabel">未在计时</div>
+      <div class="status-time" id="statusTime">--:--:--</div>
+      <div class="status-hint" id="statusHint">输入你在做什么，AI 自动分类；或点击下方活动</div>
+      <button id="stopBtn" class="stop-btn">■ 停止</button>
+    </div>
+    <div class="input-bar">
+      <input id="noteInput" type="text" placeholder="现在在做什么？如：通勤" maxlength="60" enterkeyhint="go" autocomplete="off">
+      <button id="startNoteBtn" class="btn primary">开始</button>
+    </div>
+    <div id="reminderBanner" class="reminder-banner hidden">
+      <div class="reminder-text" id="reminderText"></div>
+      <div class="reminder-actions">
+        <button id="reminderStop" class="btn small">停止</button>
+        <button id="reminderKeep" class="btn small primary">继续</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 统计视图 -->
+  <section id="view-stats" class="view hidden">
+    <div class="stats-nav">
+      <button class="period-btn active" data-period="day">日</button>
+      <button class="period-btn" data-period="week">周</button>
+      <button class="period-btn" data-period="month">月</button>
+      <div class="nav-arrows">
+        <button id="prevPeriod" class="btn small">‹</button>
+        <span id="periodLabel" class="period-label"></span>
+        <button id="nextPeriod" class="btn small">›</button>
+      </div>
+    </div>
+    <div id="statsSummary" class="stats-summary"></div>
+    <div id="pieWrap" class="pie-wrap">
+      <canvas id="pieChart"></canvas>
+      <div id="pieLegend" class="pie-legend"></div>
+    </div>
+    <div class="stats-actions">
+      <button id="exportToday" class="btn">导出今日明细表</button>
+      <button id="exportWeek" class="btn">导出本周明细表</button>
+      <button id="exportMonth" class="btn">导出本月明细表</button>
+    </div>
+    <div id="sessionList" class="session-list"></div>
+  </section>
+
+  <!-- 设置视图 -->
+  <section id="view-settings" class="view hidden">
+    <h2>分类知识库 <span class="h2-note">五行 · 十四行为 · 本地规则</span></h2>
+    <div id="categoryList" class="settings-list"></div>
+
+    <h2>记录行为</h2>
+    <div class="setting-row">
+      <label for="setIdle">遗忘提醒（无操作多久后询问）</label>
+      <select id="setIdle"></select>
+    </div>
+    <div class="setting-row">
+      <label for="setLong">超长提醒（单次计时超过）</label>
+      <select id="setLong"></select>
+    </div>
+    <div class="setting-row">
+      <label for="setVibrate">切换时震动</label>
+      <input type="checkbox" id="setVibrate">
+    </div>
+    <div class="setting-row">
+      <label for="setAI">智能分类（本地规则自动归类，无需联网）</label>
+      <input type="checkbox" id="setAI">
+    </div>
+
+    <h2>外观</h2>
+    <div class="setting-row">
+      <label for="setTheme">主题</label>
+      <select id="setTheme">
+        <option value="light">浅色</option>
+        <option value="dark">深色</option>
+        <option value="auto">跟随系统</option>
+      </select>
+    </div>
+
+    <h2>数据</h2>
+    <div class="data-actions">
+      <button id="exportCsv" class="btn">导出 CSV</button>
+      <button id="exportJson" class="btn">导出 JSON</button>
+      <button id="importJson" class="btn">导入 JSON</button>
+      <button id="clearData" class="btn danger">清空记录</button>
+    </div>
+    <div class="data-actions">
+      <button id="resetAll" class="btn danger">恢复默认设置</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+    <p class="about">柳比歇夫时间记录 v1.0 · 数据仅保存在手机本地</p>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button class="tab active" data-view="record">⏱<span>记录</span></button>
+  <button class="tab" data-view="stats">📊<span>统计</span></button>
+  <button class="tab" data-view="settings">⚙️<span>设置</span></button>
+</nav>
+
+<div id="confirmDialog" class="dialog hidden">
+  <div class="dialog-box">
+    <div class="dialog-text" id="dialogText"></div>
+    <div class="dialog-actions">
+      <button id="dialogCancel" class="btn">取消</button>
+      <button id="dialogOk" class="btn danger">确定</button>
+    </div>
+  </div>
+</div>
+
+<div id="catPicker" class="dialog hidden">
+  <div class="dialog-box">
+    <div class="dialog-text" id="catPickerTitle">重新分类</div>
+    <div id="catPickerGrid" class="picker-grid"></div>
+    <div class="dialog-actions">
+      <button id="catPickerCancel" class="btn">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="classify-rules.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

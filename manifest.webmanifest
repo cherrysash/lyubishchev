@@ -1,0 +1,17 @@
+{
+  "name": "柳比歇夫时间记录",
+  "short_name": "时间记录",
+  "description": "极简柳比歇夫时间记录器：记录你正在做的事情用了多少时间",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1a73e8",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
