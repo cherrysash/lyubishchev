@@ -578,9 +578,25 @@ function showToast(msg) {
 
 /* ================= 主题 / 背景 / PWA ================= */
 const DOT_THEMES = {
-  'pink-dots': { pattern: 'radial-gradient(circle, rgba(255,105,180,.20) 9px, transparent 10px)', size: '44px 44px', meta: '#e75480' },
-  'green-dots': { pattern: 'radial-gradient(circle, rgba(46,204,113,.20) 9px, transparent 10px)', size: '44px 44px', meta: '#27ae60' },
-  'blue-dots': { pattern: 'radial-gradient(circle, rgba(41,128,185,.20) 9px, transparent 10px)', size: '44px 44px', meta: '#2980b9' },
+  // 斜排波点：大点 + 错开半格的碎点，形成斜向节奏
+  'pink-dots': {
+    pattern: 'radial-gradient(circle, rgba(255,105,180,.32) 5px, transparent 6px), radial-gradient(circle, rgba(255,105,180,.20) 10px, transparent 11px)',
+    size: '44px 44px, 44px 44px',
+    pos: '22px 22px, 0 0',
+    meta: '#e75480',
+  },
+  'green-dots': {
+    pattern: 'radial-gradient(circle, rgba(46,204,113,.32) 5px, transparent 6px), radial-gradient(circle, rgba(46,204,113,.20) 10px, transparent 11px)',
+    size: '44px 44px, 44px 44px',
+    pos: '22px 22px, 0 0',
+    meta: '#27ae60',
+  },
+  'blue-dots': {
+    pattern: 'radial-gradient(circle, rgba(41,128,185,.32) 5px, transparent 6px), radial-gradient(circle, rgba(41,128,185,.20) 10px, transparent 11px)',
+    size: '44px 44px, 44px 44px',
+    pos: '22px 22px, 0 0',
+    meta: '#2980b9',
+  },
 };
 function applyTheme() {
   const t = state.settings.theme || 'auto';
@@ -590,11 +606,13 @@ function applyTheme() {
     document.documentElement.dataset.theme = 'dark';
     body.style.backgroundImage = '';
     body.style.backgroundSize = '';
+    body.style.backgroundPosition = '';
     meta = '#0f1115';
   } else if (DOT_THEMES[t]) {
     document.documentElement.dataset.theme = t;
     body.style.backgroundImage = DOT_THEMES[t].pattern;
     body.style.backgroundSize = DOT_THEMES[t].size;
+    body.style.backgroundPosition = DOT_THEMES[t].pos;
     meta = DOT_THEMES[t].meta;
   } else if (t === 'custom' && state.settings.bgImage) {
     document.documentElement.dataset.theme = 'light';
@@ -605,6 +623,7 @@ function applyTheme() {
     document.documentElement.dataset.theme = 'light';
     body.style.backgroundImage = '';
     body.style.backgroundSize = '';
+    body.style.backgroundPosition = '';
   }
   document.querySelector('meta[name="theme-color"]').setAttribute('content', meta);
 }
